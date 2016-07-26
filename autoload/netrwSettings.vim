@@ -79,6 +79,7 @@ fun! netrwSettings#NetrwSettings()
   put = 'let g:netrw_scp_cmd           = '.g:netrw_scp_cmd
   put = 'let g:netrw_sftp_cmd          = '.g:netrw_sftp_cmd
   put = 'let g:netrw_ssh_cmd           = '.g:netrw_ssh_cmd
+  put = 'let g:netrw_dbx_cmd           = '.g:netrw_dbx_cmd
   let s:netrw_protocol_stop= line(".")
   put = ''
 

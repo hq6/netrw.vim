@@ -125,6 +125,7 @@ call s:NetrwInit("g:netrw_rsync_cmd", "rsync")
 call s:NetrwInit("g:netrw_scp_cmd"  , "scp -q")
 call s:NetrwInit("g:netrw_sftp_cmd" , "sftp")
 call s:NetrwInit("g:netrw_ssh_cmd"  , "ssh")
+call s:NetrwInit("g:netrw_dbx_cmd"   , "dbx.py")
 
 if (has("win32") || has("win95") || has("win64") || has("win16"))
   \ && exists("g:netrw_use_nt_rcp")
@@ -954,6 +955,11 @@ fun! netrw#NetRead(mode,...)
     let result		= s:NetrwGetFile(readcmd, tmpfile, b:netrw_method)
     let b:netrw_lastfile = choice
 
+   " NetRead: (Dropbox) NetRead Method #10 {{{3
+   elseif    b:netrw_method == 10
+    exe s:netrw_silentxfer."!".g:netrw_dbx_cmd." down ".shellescape(b:netrw_fname,1)." ".tmpfile
+    let result		= s:NetrwGetFile(readcmd, tmpfile, b:netrw_method)
+    let b:netrw_lastfile = choice
    ".........................................
    " NetRead: Complain {{{3
    else
@@ -1320,6 +1326,10 @@ fun! netrw#NetWrite(...) range
     exe filtbuf."bw!"
     let b:netrw_lastfile = choice
 
+   " NetWrite: (Dropbox) NetWrite Method #10 {{{3
+   elseif    b:netrw_method == 10
+    exe s:netrw_silentxfer."!".g:netrw_dbx_cmd." up ".shellescape(b:netrw_fname,1)." ".tmpfile
+    let b:netrw_lastfile = choice
    ".........................................
    " NetWrite: Complain {{{3
    else
@@ -1572,6 +1582,7 @@ fun! s:NetrwMethod(choice)
   let rsyncurm = '^rsync://\([^/]\{-}\)/\(.*\)\=$'
   let fetchurm = '^fetch://\(\([^/@]\{-}\)@\)\=\([^/#:]\{-}\)\(:http\)\=/\(.*\)$'
   let sftpurm  = '^sftp://\([^/]\{-}\)/\(.*\)\=$'
+  let dburm    = '^dbx:///\(.*\)\=$'
 
 "  call Decho("determine method:")
   " Determine Method
@@ -1665,6 +1676,11 @@ fun! s:NetrwMethod(choice)
     endif
    endif
 
+  " Method#10: Get it from Dropbox
+  elseif match(a:choice, dburm) == 0
+    let b:netrw_method = 10
+    let b:netrw_fname  = substitute(a:choice,dburm,'\1',"")
+
   " Method#8: fetch {{{3
   elseif match(a:choice,fetchurm) == 0
 "   call Decho("fetch://...")
@@ -1718,7 +1734,6 @@ fun! s:NetrwMethod(choice)
    if userid != ""
     let g:netrw_uid= userid
    endif
-
   " Cannot Determine Method {{{3
   else
    if !exists("g:netrw_quiet")
@@ -2510,7 +2525,7 @@ fun! s:NetrwBrowse(islocal,dirname)
   " set b:netrw_curdir to the new directory name {{{3
 "  call Decho("set b:netrw_curdir to the new directory name:  (buf#".bufnr("%").")")
   let b:netrw_curdir= dirname
-  if b:netrw_curdir =~ '[/\\]$'
+  if b:netrw_curdir =~ '[/\\]$' && b:netrw_curdir !~ '^dbx://'
    let b:netrw_curdir= substitute(b:netrw_curdir,'[/\\]$','','e')
   endif
   if b:netrw_curdir == ''
@@ -2582,6 +2597,14 @@ fun! s:NetrwBrowse(islocal,dirname)
    else
     let dirname = substitute(dirname,'\\','/','g')
 "    call Decho("(normal) dirname<".dirname.">")
+   endif
+   " Check if the pattern matches a Dropbox URL.
+   let dbxpat = '^dbx:///\(.*\)\='
+   if dirname =~ dbxpat
+      keepj call s:NetrwMaps(a:islocal)
+      keepj call s:PerformListing(a:islocal)
+      let s:locbrowseshellcmd= 1
+      return
    endif
 
    let dirpat  = '^\(\w\{-}\)://\(\w\+@\)\=\([^/]\+\)/\(.*\)$'
@@ -3177,7 +3200,6 @@ fun! s:NetrwBrowseChgDir(islocal,newdir,...)
   else
    let dirpat= '[\/]$'
   endif
-"  call Decho("dirname<".dirname.">  dirpat<".dirpat.">")
 
   if dirname !~ dirpat
    " apparently vim is "recognizing" that it is in a directory and
@@ -6837,7 +6859,13 @@ fun! s:NetrwRemoteListing()
      keepj call histdel("/",-1)
     endif
    endif
-
+  " Dropbox directory listing
+  elseif s:method == "dbx"
+    if s:path == ''
+     exe "sil! keepalt r! ".g:netrw_dbx_cmd." list /"
+    else
+     exe "sil! keepalt r! ".g:netrw_dbx_cmd." list ".shellescape(s:path)
+    endif
   else
    " use ssh to get remote file listing {{{3
 "   call Decho("use ssh to get remote file listing: s:path<".s:path.">")
@@ -8363,6 +8391,17 @@ endfun
 " s:RemotePathAnalysis: {{{2
 fun! s:RemotePathAnalysis(dirname)
 "  call Dfunc("s:RemotePathAnalysis(a:dirname<".a:dirname.">)")
+
+  let dbxpat = '^dbx:///\(.*\)\='
+  if a:dirname =~ dbxpat
+      let s:method  = 'dbx'
+      let s:user    = ''
+      let s:machine = ''
+      let s:port    = ''
+      let s:path    = substitute(a:dirname,dbxpat,'\1','')
+      let s:fname   = ''
+      return
+  endif
 
   let dirpat  = '^\(\w\{-}\)://\(\w\+@\)\=\([^/:#]\+\)\%([:#]\(\d\+\)\)\=/\(.*\)$'
   let s:method  = substitute(a:dirname,dirpat,'\1','')

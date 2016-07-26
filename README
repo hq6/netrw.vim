@@ -17,6 +17,7 @@ Netrw supports reading and writing files across networks.  One may use urls for 
         :e rsync://[user@]machine[:port]/path         uses rsync
         :e scp://[user@]machine[[:#]port]/path        uses scp
         :e sftp://[user@]machine/path                    uses sftp
+        :e dbx:///path                               uses dbx.py, included and must be put into the path.
 
     REMOTE READING
         :Nread ?                                                     give help
@@ -47,6 +48,7 @@ Netrw supports reading and writing files across networks.  One may use urls for 
 
     REMOTE DIRECTORY BROWSING
         :e [protocol]://[user]@hostname/path/
+        :e dbx:///path
         :Nread [protocol]://[user]@hostname/path/
 
     LOCAL DIRECTORY BROWSING
