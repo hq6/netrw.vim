@@ -6,6 +6,8 @@ which allows vim to support URL's of the type `dbx:///Path/Inside/Dropbox`.
 At the moment, it supports only reading files, creating files, and browsing
 directories. It cannot perform file deletions or renames.
 
+Here is a [demo video](https://dl.dropboxusercontent.com/u/25959267/1313%20-%20Vim-Dropbox.mp4) showing the expected behavior.
+
 ## Installation
 
 Installation is currently manual, but should not be too difficult for users
